@@ -1,0 +1,4 @@
+interface:
+  display_name: "Arcals Agent"
+  short_description: "Install an Agent Wallet and safely operate Arcals"
+  default_prompt: "Use $arcals to install Arcals, set up my Agent Wallet, and prepare one safe Mint."

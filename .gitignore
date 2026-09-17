@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+coverage/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+*.keystore
+*.sqlite
+*.sqlite-*
+.DS_Store
+.idea/
+.vscode/

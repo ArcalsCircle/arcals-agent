@@ -48,6 +48,7 @@ describe("OpenAPI component schemas", () => {
     expect(Object.keys(OPENAPI_DOCUMENT.paths).sort()).toEqual(
       [
         "/v1/arcals/{id}",
+        "/v1/arcals/{id}/image.svg",
         "/v1/auth/nonce",
         "/v1/auth/session",
         "/v1/challenges",

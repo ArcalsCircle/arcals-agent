@@ -6,4 +6,5 @@
  */
 export * from "./constants.js";
 export * from "./pi.js";
+export * from "./artwork.js";
 export type { Bytes32, HexAddress } from "./environment.js";

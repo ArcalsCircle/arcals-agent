@@ -16,6 +16,7 @@ export * from "./api-types.js";
 export * from "./encoding.js";
 export * from "./errors.js";
 export * from "./pi.js";
+export * from "./artwork.js";
 export * from "./manifest.js";
 export * from "./openapi.js";
 export * from "./schema-validation.js";

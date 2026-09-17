@@ -517,6 +517,46 @@
         }
       }
     },
+    "/v1/arcals/{id}/image.svg": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "operationId": "getArcalImage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ArcalIdString"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Arcal artwork, identical to the on-chain renderer output",
+            "content": {
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured Arcals error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/wallets/{address}/arcals": {
       "get": {
         "tags": [

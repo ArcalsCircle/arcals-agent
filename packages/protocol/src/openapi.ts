@@ -181,6 +181,21 @@ export const OPENAPI_DOCUMENT = {
         },
       },
     },
+    "/v1/arcals/{id}/image.svg": {
+      get: {
+        tags: ["Content"],
+        operationId: "getArcalImage",
+        parameters: [pathParameter("id", "ArcalIdString")],
+        responses: {
+          "200": {
+            description:
+              "Arcal artwork, identical to the on-chain renderer output",
+            content: { "image/svg+xml": { schema: { type: "string" } } },
+          },
+          default: defaultError,
+        },
+      },
+    },
     "/v1/wallets/{address}/arcals": {
       get: {
         tags: ["Read"],

@@ -5,10 +5,7 @@
   "chainId": "5042",
   "apiUrl": "https://api.arcals.fun",
   "rpcUrl": "https://rpc.mainnet.arc.io",
-  "rpcFallbackUrls": [
-    "https://arc-rpc.publicnode.com",
-    "https://arc.drpc.org"
-  ],
+  "rpcFallbackUrls": ["https://arc-rpc.publicnode.com", "https://arc.drpc.org"],
   "deployment": {
     "core": "0x8e22e1afec4888356232ea184f465428b6d70219",
     "base": "0x364cafbf6b8ae3da1ec0fa5ecd9517facaafd78e",

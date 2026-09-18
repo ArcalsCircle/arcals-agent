@@ -204,11 +204,25 @@ table.
 cancel a transaction that has already been broadcast; pending operations remain
 tracked.
 
-Do not interpret “Mint three” as permission for unattended mode. Explain that
-continuous mode requires a separate authorization covering count, total project
-value, Gas, expiry, Controller, selector, and revocation with wallet/account
-evidence. If any capability is missing, execute each Mint with its own
-confirmation.
+“Mint three” is a request for a bounded batch, not open-ended permission.
+Confirm the exact count, the exact total project value (`0.1 USDC × count`), the
+Gas budget and an expiry, then authorize that batch once:
+
+```text
+authorize --session --max-mints 3 --mint-budget 300000000000000000 \
+  --gas-budget 20000000000000000 --until <RFC3339> --json
+run --json
+```
+
+`--session` limits are enforced by the CLI's durable ledger, not by the wallet;
+the response repeats this in `enforcedBy`. Tell the user which layer enforces
+the batch. A session covers at most 100 Mints and 6 hours; when it ends, ask
+again. Drop `--session` only when the wallet itself enforces count, spend, Gas,
+expiry, contract, selector and revocation — then the same commands run under
+wallet enforcement.
+
+`run` stops at the authorized count, at the budget, at expiry, on `stop`, and on
+the first failed Mint.
 
 ## Form conversion
 

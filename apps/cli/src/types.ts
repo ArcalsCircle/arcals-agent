@@ -121,9 +121,13 @@ export interface LocalOperationRecord {
   readonly updatedAt: string;
 }
 
+/** Who enforces the limits: the wallet/account, or this CLI's durable ledger. */
+export type AuthorizationEnforcement = "wallet" | "session";
+
 export interface ContinuousAuthorization {
   readonly environmentId: string;
   readonly wallet: HexAddress;
+  readonly enforcement: AuthorizationEnforcement;
   readonly maxMints: number;
   readonly maxFeeNative: string;
   readonly maxGasNative: string;

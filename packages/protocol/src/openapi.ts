@@ -181,6 +181,50 @@ export const OPENAPI_DOCUMENT = {
         },
       },
     },
+    "/v1/public/config": {
+      get: {
+        tags: ["Read"],
+        operationId: "getPublicConfig",
+        description:
+          "Stable public surface: network, contract addresses and frozen protocol parameters.",
+        responses: {
+          "200": {
+            description: "Public configuration",
+            content: { "application/json": { schema: { type: "object" } } },
+          },
+          default: defaultError,
+        },
+      },
+    },
+    "/v1/public/status": {
+      get: {
+        tags: ["Read"],
+        operationId: "getPublicStatus",
+        description:
+          "Live protocol state, Mint counters and read-model freshness. Safe to poll every 5 seconds.",
+        responses: {
+          "200": {
+            description: "Public status",
+            content: { "application/json": { schema: { type: "object" } } },
+          },
+          default: defaultError,
+        },
+      },
+    },
+    "/v1/public/skill": {
+      get: {
+        tags: ["Read"],
+        operationId: "getPublicSkill",
+        description: "Where to install the official Agent Skill and CLI.",
+        responses: {
+          "200": {
+            description: "Skill release pointer",
+            content: { "application/json": { schema: { type: "object" } } },
+          },
+          default: defaultError,
+        },
+      },
+    },
     "/v1/arcals/{id}/image.svg": {
       get: {
         tags: ["Content"],

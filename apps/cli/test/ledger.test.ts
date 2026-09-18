@@ -84,6 +84,7 @@ describe("durable Agent operation ledger", () => {
       maxGasNative: 10_000n,
       expiresAt: new Date("2030-01-01T00:00:00Z"),
       capabilities,
+      enforcement: "wallet",
     });
     ledger.beginOperation({
       operationId: "10000000-0000-4000-8000-000000000002",

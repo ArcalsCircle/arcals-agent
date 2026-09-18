@@ -48,6 +48,7 @@ import {
 } from "./trust.js";
 import type { ChainRecoveryGateway } from "./trust.js";
 import type {
+  AuthorizationEnforcement,
   AgentEnvironmentManifest,
   CliCommand,
   CliEnvelope,
@@ -60,6 +61,14 @@ import type {
   ProgressStage,
 } from "./types.js";
 import { WALLET_CAPABILITY_NAMES, isHardCapability } from "./types.js";
+
+/**
+ * A session authorization is enforced by this CLI's durable ledger instead of
+ * the wallet, so it stays small and short: one explicit user confirmation
+ * covers at most this many Mints, this much spend and this much time.
+ */
+const SESSION_MAX_MINTS = 100;
+const SESSION_MAX_DURATION_MS = 6 * 60 * 60 * 1000;
 
 const UNATTENDED_CAPABILITIES = [
   "chain",
@@ -241,6 +250,12 @@ export class AgentRuntime {
     readonly maxFeeNative: bigint;
     readonly maxGasNative: bigint;
     readonly expiresAt: Date;
+    /**
+     * "wallet" requires hard wallet/account enforcement. "session" accepts a
+     * bounded authorization that this CLI enforces in its durable ledger, for
+     * wallets that cannot enforce Arcals limits themselves.
+     */
+    readonly enforcement?: AuthorizationEnforcement;
   }): Promise<CliEnvelope> {
     return this.execute("authorize", async (wallet) => {
       if (!Number.isInteger(input.maxMints) || input.maxMints <= 0) {
@@ -267,8 +282,26 @@ export class AgentRuntime {
           "Gas budget must be positive",
         );
       }
-      const capabilities = await this.options.wallet.configureMintAuthorization(
-        {
+      const requested = input.enforcement ?? "wallet";
+      if (requested === "session") {
+        if (input.maxMints > SESSION_MAX_MINTS) {
+          throw new AgentRuntimeError(
+            "WALLET_CAPABILITY_UNAVAILABLE",
+            `A session authorization covers at most ${String(SESSION_MAX_MINTS)} Mints`,
+          );
+        }
+        if (
+          input.expiresAt.getTime() - this.now().getTime() >
+          SESSION_MAX_DURATION_MS
+        ) {
+          throw new AgentRuntimeError(
+            "WALLET_CAPABILITY_UNAVAILABLE",
+            "A session authorization lasts at most 6 hours",
+          );
+        }
+      }
+      const capabilities = await this.options.wallet
+        .configureMintAuthorization({
           chainId: BigInt(this.options.manifest.chainId),
           controller: this.options.manifest.deployment.controller,
           mintSelector: "0x88e832cc",
@@ -276,14 +309,23 @@ export class AgentRuntime {
           maxFeeNative: input.maxFeeNative,
           maxGasNative: input.maxGasNative,
           expiresAt: input.expiresAt,
-        },
-      );
-      if (!this.unattendedReady(capabilities)) {
+        })
+        .catch(async (error: unknown) => {
+          // Wallets without Arcals policy support reject this outright; a
+          // session authorization still needs their plain capability report.
+          if (requested === "wallet") throw error;
+          return this.options.wallet.getCapabilities();
+        });
+      const walletEnforced = this.unattendedReady(capabilities);
+      if (!walletEnforced && requested === "wallet") {
         throw new AgentRuntimeError(
           "WALLET_CAPABILITY_UNAVAILABLE",
-          "Wallet/account did not return evidence for every unattended Mint boundary; use manual mine --once",
+          "Wallet/account did not return evidence for every unattended Mint boundary; authorize a bounded session instead",
         );
       }
+      const enforcement: AuthorizationEnforcement = walletEnforced
+        ? "wallet"
+        : "session";
       const authorization = this.options.ledger.authorize({
         environmentId: this.options.manifest.environmentId,
         wallet,
@@ -292,12 +334,18 @@ export class AgentRuntime {
         maxGasNative: input.maxGasNative,
         expiresAt: input.expiresAt,
         capabilities,
+        enforcement,
       });
       this.options.ledger.clearStop(
         this.options.manifest.environmentId,
         wallet,
       );
       return this.envelope("authorize", "AUTHORIZED", wallet, null, null, {
+        enforcement,
+        enforcedBy:
+          enforcement === "wallet"
+            ? "The wallet enforces every boundary on the account."
+            : "This CLI enforces the count, spend and expiry in its local ledger; the wallet does not.",
         authorization,
         budget: this.options.ledger.budgetSnapshot(
           this.options.manifest.environmentId,
@@ -691,7 +739,13 @@ export class AgentRuntime {
       if (authorization === null || authorization.revokedAt !== null) {
         throw new AgentRuntimeError(
           "WALLET_CAPABILITY_UNAVAILABLE",
-          "No active wallet-enforced continuous authorization exists",
+          "No active continuous authorization exists; run authorize first",
+        );
+      }
+      if (new Date(authorization.expiresAt) <= this.now()) {
+        throw new AgentRuntimeError(
+          "WALLET_CAPABILITY_UNAVAILABLE",
+          "The continuous authorization expired; authorize again",
         );
       }
       const results: CliEnvelope[] = [];
@@ -1091,10 +1145,21 @@ export class AgentRuntime {
       );
     }
     if (unattended && !this.unattendedReady(capabilities)) {
-      throw new AgentRuntimeError(
-        "WALLET_CAPABILITY_UNAVAILABLE",
-        "Wallet does not provide hard unattended policy enforcement",
+      const authorization = this.options.ledger.authorization(
+        this.options.manifest.environmentId,
+        wallet,
       );
+      if (
+        authorization === null ||
+        authorization.revokedAt !== null ||
+        authorization.enforcement !== "session" ||
+        new Date(authorization.expiresAt) <= this.now()
+      ) {
+        throw new AgentRuntimeError(
+          "WALLET_CAPABILITY_UNAVAILABLE",
+          "Unattended Mint needs wallet enforcement or an active session authorization",
+        );
+      }
     }
     return config;
   }

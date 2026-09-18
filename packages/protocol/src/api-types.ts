@@ -170,6 +170,8 @@ export interface VaultDto {
 }
 
 export interface StatsDto {
+  readonly reserveMintedCount: DecimalString;
+  readonly mintPaused: boolean;
   readonly minted: DecimalString;
   readonly reserveArcl: DecimalString;
   readonly externalArcl: DecimalString;

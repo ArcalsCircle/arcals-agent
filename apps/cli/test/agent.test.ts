@@ -1167,4 +1167,55 @@ describe("Agent Mint orchestration and recovery", () => {
     expect(harness.wallet.submitCount).toBe(1);
     await harness.close();
   });
+
+  it("authorizes a bounded session when the wallet cannot enforce limits", async () => {
+    const harness = await makeHarness({ submitMode: "confirmed" });
+    const { runtime, ledger } = harness;
+    const environmentId = `31337:${deployment.core}`;
+    // The harness clock is fixed at the fixture timestamp plus ten seconds.
+    const harnessNow = (1_800_000_000 + 10) * 1000;
+    const expiresAt = new Date(harnessNow + 30 * 60_000);
+
+    await expect(
+      runtime.authorize({
+        maxMints: 5,
+        maxFeeNative: 500_000_000_000_000_000n,
+        maxGasNative: 10_000n,
+        expiresAt,
+      }),
+    ).resolves.toMatchObject({ ok: false });
+
+    const session = await runtime.authorize({
+      maxMints: 5,
+      maxFeeNative: 500_000_000_000_000_000n,
+      maxGasNative: 10_000n,
+      expiresAt,
+      enforcement: "session",
+    });
+    expect(session.ok).toBe(true);
+    expect(session.data.enforcement).toBe("session");
+    expect(
+      ledger.authorization(environmentId, walletAddress)?.enforcement,
+    ).toBe("session");
+
+    await expect(
+      runtime.authorize({
+        maxMints: 101,
+        maxFeeNative: 20_000_000_000_000_000_000n,
+        maxGasNative: 10_000n,
+        expiresAt,
+        enforcement: "session",
+      }),
+    ).resolves.toMatchObject({ ok: false });
+
+    await expect(
+      runtime.authorize({
+        maxMints: 5,
+        maxFeeNative: 500_000_000_000_000_000n,
+        maxGasNative: 10_000n,
+        expiresAt: new Date(harnessNow + 7 * 60 * 60_000),
+        enforcement: "session",
+      }),
+    ).resolves.toMatchObject({ ok: false });
+  });
 });

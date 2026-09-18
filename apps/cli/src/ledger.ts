@@ -470,6 +470,7 @@ export class SqliteOperationLedger {
     readonly maxGasNative: bigint;
     readonly expiresAt: Date;
     readonly capabilities: WalletCapabilities;
+    readonly enforcement: "wallet" | "session";
   }): ContinuousAuthorization {
     if (!Number.isInteger(input.maxMints) || input.maxMints <= 0) {
       throw new RangeError("maxMints must be a positive integer");
@@ -482,12 +483,13 @@ export class SqliteOperationLedger {
       .prepare(
         `INSERT INTO authorizations(
            environment_id,wallet,max_mints,max_fee_native,max_gas_native,
-           expires_at,capability_evidence,revoked_at,created_at
-         ) VALUES(?,?,?,?,?,?,?,NULL,?)
+           expires_at,capability_evidence,enforcement,revoked_at,created_at
+         ) VALUES(?,?,?,?,?,?,?,?,NULL,?)
          ON CONFLICT(environment_id,wallet) DO UPDATE SET
            max_mints=excluded.max_mints,max_fee_native=excluded.max_fee_native,
            max_gas_native=excluded.max_gas_native,expires_at=excluded.expires_at,
-           capability_evidence=excluded.capability_evidence,revoked_at=NULL,
+           capability_evidence=excluded.capability_evidence,
+           enforcement=excluded.enforcement,revoked_at=NULL,
            created_at=excluded.created_at`,
       )
       .run(
@@ -498,6 +500,7 @@ export class SqliteOperationLedger {
         input.maxGasNative.toString(),
         input.expiresAt.toISOString(),
         JSON.stringify(input.capabilities),
+        input.enforcement,
         now,
       );
     return this.requireAuthorization(input.environmentId, input.wallet);
@@ -716,6 +719,7 @@ export class SqliteOperationLedger {
       capabilityEvidence: JSON.parse(
         asText(row.capability_evidence),
       ) as WalletCapabilities,
+      enforcement: asText(row.enforcement) === "session" ? "session" : "wallet",
       revokedAt: nullableText(row.revoked_at),
       createdAt: asText(row.created_at),
     };
@@ -794,6 +798,14 @@ export class SqliteOperationLedger {
         );
       }
     }
+    const authorizationColumns = this.database
+      .prepare("PRAGMA table_info(authorizations)")
+      .all() as { name: string }[];
+    if (!authorizationColumns.some((column) => column.name === "enforcement")) {
+      this.database.exec(
+        "ALTER TABLE authorizations ADD COLUMN enforcement TEXT NOT NULL DEFAULT 'wallet'",
+      );
+    }
     if (!columns.some((column) => column.name === "pending_call")) {
       // Ledgers created before resumable Mint: the exact certified call, so a Mint that was certified but never
       // handed to a wallet can be resumed with the same certificate instead of being lost.
@@ -871,6 +883,7 @@ export class SqliteOperationLedger {
         max_gas_native TEXT NOT NULL,
         expires_at TEXT NOT NULL,
         capability_evidence TEXT NOT NULL,
+        enforcement TEXT NOT NULL DEFAULT 'wallet',
         revoked_at TEXT,
         created_at TEXT NOT NULL,
         PRIMARY KEY(environment_id,wallet)

@@ -518,6 +518,8 @@ export const API_SCHEMAS = {
   StatsData: closedObject(
     {
       minted: ref("DecimalString"),
+      reserveMintedCount: ref("DecimalString"),
+      mintPaused: { type: "boolean" },
       reserveArcl: ref("DecimalString"),
       externalArcl: ref("DecimalString"),
       bankedCount: ref("DecimalString"),
@@ -525,6 +527,8 @@ export const API_SCHEMAS = {
     },
     [
       "minted",
+      "reserveMintedCount",
+      "mintPaused",
       "reserveArcl",
       "externalArcl",
       "bankedCount",

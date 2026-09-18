@@ -8,6 +8,7 @@ const BOOLEAN_FLAGS = new Set([
   "--once",
   "--confirm",
   "--with-content",
+  "--session",
 ]);
 
 export interface ParsedArguments {
@@ -97,6 +98,8 @@ export async function executeParsedCommand(
       ),
       maxGasNative: unsigned(required(parsed, "--gas-budget"), "--gas-budget"),
       expiresAt,
+      // Without --session the wallet must enforce every boundary itself.
+      enforcement: parsed.flags.has("--session") ? "session" : "wallet",
     });
   }
   if (command === "run") return runtime.run({ threads });
@@ -132,7 +135,7 @@ export async function executeParsedCommand(
     );
   }
   throw new Error(
-    "unknown command; expected preflight, wallet setup, mine --once, authorize, run, status, stop, verify-receipt, content register, form liquify, or form reform",
+    "unknown command; expected preflight, wallet setup, mine --once, authorize [--session], run, status, stop, verify-receipt, content register, form liquify, or form reform",
   );
 }
 

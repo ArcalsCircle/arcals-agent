@@ -29,7 +29,7 @@ The entrypoint is `apps/cli/dist/main.js`.
 arcals preflight --json
 arcals wallet setup --json
 arcals mine --once [--with-content] [--confirm] --json
-arcals authorize --max-mints N --mint-budget NATIVE_INTEGER \
+arcals authorize [--session] --max-mints N --mint-budget NATIVE_INTEGER \
   --gas-budget NATIVE_INTEGER --until RFC3339 --json
 arcals run --json
 arcals status --json
@@ -152,7 +152,15 @@ conservatively books the submitted maximum instead of zero. Content
 registration is a separate child operation, so a content failure never causes
 another Mint.
 
-Continuous `run` is disabled unless the wallet or account applies, and returns
-evidence for, chain, native value, ERC-721 receipt, authentication, contract and
-selector restrictions, per-call and cumulative value, Mint count, Gas, expiry,
-revocation and idempotent submission. CLI counters are only bookkeeping.
+Continuous `run` needs an authorization. `authorize` without `--session`
+requires the wallet or account to apply, and return evidence for, chain, native
+value, ERC-721 receipt, authentication, contract and selector restrictions,
+per-call and cumulative value, Mint count, Gas, expiry, revocation and
+idempotent submission.
+
+`authorize --session` covers wallets that cannot enforce those limits
+themselves. The CLI then enforces the count, spend, Gas budget and expiry in its
+durable ledger, so a restart cannot reset them and `stop` revokes them at once.
+A session is deliberately small: at most 100 Mints and 6 hours. Every response
+states which layer enforces the batch in `enforcement` and `enforcedBy`; never
+present a session as wallet enforcement.

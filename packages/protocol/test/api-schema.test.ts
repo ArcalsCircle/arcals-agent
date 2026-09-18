@@ -49,6 +49,9 @@ describe("OpenAPI component schemas", () => {
       [
         "/v1/arcals/{id}",
         "/v1/arcals/{id}/image.svg",
+        "/v1/public/config",
+        "/v1/public/status",
+        "/v1/public/skill",
         "/v1/auth/nonce",
         "/v1/auth/session",
         "/v1/challenges",

@@ -18,7 +18,13 @@
 #include <vector>
 
 #if defined(__linux__)
+#if defined(__linux__)
 #include <sys/sysinfo.h>
+#elif defined(_WIN32)
+// Memory reporting uses the Win32 status API; the JSONL protocol stays identical.
+#include <windows.h>
+#include <psapi.h>
+#endif
 #endif
 
 #include "randomx.h"
@@ -53,7 +59,12 @@ randomx_flags removeFlag(randomx_flags value, randomx_flags flag) {
 }
 
 uint64_t availableMemoryBytes() {
-#if defined(__linux__)
+#if defined(_WIN32)
+  MEMORYSTATUSEX status{};
+  status.dwLength = sizeof(status);
+  if (GlobalMemoryStatusEx(&status) == 0) return 0;
+  return static_cast<uint64_t>(status.ullAvailPhys);
+#elif defined(__linux__)
   std::ifstream memory("/proc/meminfo");
   std::string field;
   uint64_t kibibytes = 0;
@@ -70,7 +81,13 @@ uint64_t availableMemoryBytes() {
 }
 
 uint64_t residentMemoryBytes() {
-#if defined(__linux__)
+#if defined(_WIN32)
+  PROCESS_MEMORY_COUNTERS counters{};
+  if (GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)) == 0) {
+    return 0;
+  }
+  return static_cast<uint64_t>(counters.WorkingSetSize);
+#elif defined(__linux__)
   std::ifstream status("/proc/self/status");
   std::string line;
   while (std::getline(status, line)) {

@@ -23,6 +23,10 @@ else()
 endif()
 target_include_directories(arcals-randomx-worker PRIVATE "${RANDOMX_SOURCE_DIR}/src")
 target_link_libraries(arcals-randomx-worker PRIVATE randomx Threads::Threads)
+if(WIN32)
+  # GlobalMemoryStatusEx and GetProcessMemoryInfo live in psapi.
+  target_link_libraries(arcals-randomx-worker PRIVATE psapi)
+endif()
 
 set_target_properties(
   arcals-randomx-worker

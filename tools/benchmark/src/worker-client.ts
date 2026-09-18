@@ -186,3 +186,15 @@ export class RandomXWorkerClient {
     this.waiters.clear();
   }
 }
+
+/**
+ * Where a local build puts the worker. MSVC is a multi-config generator, so on
+ * Windows the executable lands in a configuration subdirectory with an .exe
+ * suffix; single-config generators write it straight into the build directory.
+ */
+export function localWorkerBinaryPath(repositoryRoot: string): string {
+  const base = `${repositoryRoot.replace(/\/?$/u, "/")}native/randomx-worker/build/`;
+  return process.platform === "win32"
+    ? `${base}Release/arcals-randomx-worker.exe`
+    : `${base}arcals-randomx-worker`;
+}

@@ -47,6 +47,7 @@ const WORKER_PLATFORMS = new Set([
   "linux-arm64",
   "darwin-arm64",
   "darwin-x64",
+  "win32-x64",
 ]);
 
 export function currentWorkerPlatform(): string {
@@ -234,7 +235,10 @@ export async function loadAgentManifest(
           ? join(
               workerCacheDirectory(),
               selected.binarySha256,
-              "arcals-randomx-worker",
+              // Windows can only execute a file with an executable extension.
+              process.platform === "win32"
+                ? "arcals-randomx-worker.exe"
+                : "arcals-randomx-worker",
             )
           : worker.binaryPath),
       binarySha256: selected.binarySha256,
@@ -320,7 +324,8 @@ export async function ensureWorkerInstalled(
   }
   const temporary = `${worker.binaryPath}.${process.pid.toString()}.download`;
   await writeFile(temporary, bytes, { mode: 0o755 });
-  await chmod(temporary, 0o755);
+  // Windows has no execute bit and rejects chmod on some filesystems.
+  if (process.platform !== "win32") await chmod(temporary, 0o755);
   await rename(temporary, worker.binaryPath);
   return "DOWNLOADED";
 }

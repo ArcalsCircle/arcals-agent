@@ -4,13 +4,14 @@ import { fileURLToPath } from "node:url";
 
 import { RANDOMX_ALGORITHM_ID, buildRandomXInput } from "@arcals/protocol";
 
-import { RandomXWorkerClient, WorkerProtocolError } from "./worker-client.js";
+import {
+  RandomXWorkerClient,
+  WorkerProtocolError,
+  localWorkerBinaryPath,
+} from "./worker-client.js";
 
-const binaryPath = fileURLToPath(
-  new URL(
-    "../../../native/randomx-worker/build/arcals-randomx-worker",
-    import.meta.url,
-  ),
+const binaryPath = localWorkerBinaryPath(
+  fileURLToPath(new URL("../../../", import.meta.url)),
 );
 const vector = JSON.parse(
   await readFile(

@@ -15,10 +15,10 @@ import { fileURLToPath } from "node:url";
 import { RANDOMX_ALGORITHM_ID } from "@arcals/protocol";
 
 import { deriveTargetFromMeasurement } from "./target.js";
-import { RandomXWorkerClient } from "./worker-client.js";
+import { RandomXWorkerClient, localWorkerBinaryPath } from "./worker-client.js";
 
 const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
-const binaryPath = `${repositoryRoot}native/randomx-worker/build/arcals-randomx-worker`;
+const binaryPath = localWorkerBinaryPath(repositoryRoot);
 const epochKey = `0x${"51".repeat(32)}`;
 const parameterDigest = `0x${"62".repeat(32)}`;
 const challengeInput = `0x${"73".repeat(32)}`;

@@ -118,6 +118,16 @@ interface MineOnceInput {
 
 /** Leave room for provider latency before the certificate's on-chain expiry. */
 const MIN_CERTIFICATE_SEND_WINDOW_MS = 90_000;
+/**
+ * A certificate carries the issuer's `issuedAt`, and the controller rejects one
+ * whose `issuedAt` is newer than the block it is executed against. A read RPC
+ * simulates against the block that already exists, which can still be a second
+ * or two older than a certificate signed moments ago, so a simulation run right
+ * after certification fails while the Mint itself would succeed in the next
+ * block. Re-simulate a few times across that gap before giving up.
+ */
+const SIMULATION_ATTEMPTS = 4;
+const SIMULATION_RETRY_MS = 1_500;
 
 function gasAttribution(result: SubmissionResult): {
   networkGasCostNative: bigint | null;
@@ -652,7 +662,15 @@ export class AgentRuntime {
         operationId,
       );
     }
-    const simulation = await this.options.wallet.simulateCall(call);
+    let simulation = await this.options.wallet.simulateCall(call);
+    for (
+      let attempt = 1;
+      attempt < SIMULATION_ATTEMPTS && !simulation.success;
+      attempt += 1
+    ) {
+      await this.sleep(SIMULATION_RETRY_MS);
+      simulation = await this.options.wallet.simulateCall(call);
+    }
     if (!simulation.success) {
       // Keep the still-valid certificate resumable: simulation can fail for transient reasons.
       throw new AgentRuntimeError(

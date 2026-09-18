@@ -440,6 +440,95 @@ describe("Circle CLI Arc Testnet driver", () => {
     });
   });
 
+  it("resolves a request Circle rejected before it broadcast anything", async () => {
+    // Circle reports such a rejection as a terminal transaction with no hash,
+    // which no chain lookup can find. Leaving it unresolved would block the
+    // wallet from ever Minting again.
+    const runner = new FakeRunner(async (args) => {
+      if (args[0] === "transaction" && args[1] === "list") {
+        return {
+          stdout: JSON.stringify({
+            data: {
+              transactions: [
+                {
+                  id: "circle-operation-rejected",
+                  state: "FAILED",
+                  blockchain: "ARC",
+                  sourceAddress: address,
+                  operation: "CONTRACT_EXECUTION",
+                  contractAddress: controller,
+                  abiParameters: null,
+                  errorReason: "ESTIMATION_ERROR",
+                  errorDetails: "execution reverted",
+                  createDate: new Date().toISOString(),
+                },
+              ],
+            },
+          }),
+          stderr: "",
+        };
+      }
+      return { stdout: JSON.stringify({ data: {} }), stderr: "" };
+    });
+    const driver = new CircleCliDriver({
+      address,
+      chainId: 5_042_002n,
+      publicClient: publicClient(),
+      journalDirectory: temporaryJournal(),
+      runner,
+    });
+    const requestId = "123e4567-e89b-42d3-a456-426614174000";
+    await driver.prepare(requestId, mintCall);
+    await expect(driver.queryRequest(requestId)).resolves.toMatchObject({
+      status: "REVERTED",
+      transactionHash: null,
+      gasSpentNative: 0n,
+    });
+  });
+
+  it("quotes fees from the chain when Circle cannot estimate", async () => {
+    // Circle's estimate endpoint has returned 503 while the rest of the wallet
+    // kept working; the Mint must still go out.
+    const runner = new FakeRunner(async (args) => {
+      if (args.includes("--estimate")) {
+        throw new Error(
+          "CIRCLE_CLI_INTERNAL: Service returned error 503: Something went wrong.",
+        );
+      }
+      return { stdout: JSON.stringify({ data: {} }), stderr: "" };
+    });
+    const driver = new CircleCliDriver({
+      address,
+      chainId: 5_042_002n,
+      publicClient: publicClient(),
+      journalDirectory: temporaryJournal(),
+      runner,
+    });
+    // 500,000 estimated Gas with the 20% margin, priced at maxFeePerGas 2.
+    await expect(driver.estimate(mintCall)).resolves.toEqual({
+      gasLimit: 600_000n,
+      maxGasNative: 1_200_000n,
+    });
+  });
+
+  it("quotes fees from the chain when Circle omits the medium tier", async () => {
+    const runner = new FakeRunner(async () => ({
+      stdout: JSON.stringify({ data: { blockchain: "ARC-TESTNET" } }),
+      stderr: "",
+    }));
+    const driver = new CircleCliDriver({
+      address,
+      chainId: 5_042_002n,
+      publicClient: publicClient(),
+      journalDirectory: temporaryJournal(),
+      runner,
+    });
+    await expect(driver.estimate(mintCall)).resolves.toEqual({
+      gasLimit: 600_000n,
+      maxGasNative: 1_200_000n,
+    });
+  });
+
   it("recovers a lost execute response from the durable public request journal", async () => {
     const decoded = decodeCircleCall(buildEncodedMintCall(mintCall).data);
     const journalDirectory = temporaryJournal();

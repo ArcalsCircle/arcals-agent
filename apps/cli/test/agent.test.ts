@@ -115,7 +115,17 @@ class FakeWallet implements WalletAdapter {
   async authenticate(): Promise<`0x${string}`> {
     return "0x12";
   }
-  async simulateCall(): Promise<{ success: true; diagnostic: null }> {
+  /** Number of simulations to answer with a revert before succeeding. */
+  simulationFailures = 0;
+  simulationCalls = 0;
+  async simulateCall(): Promise<{
+    success: boolean;
+    diagnostic: string | null;
+  }> {
+    this.simulationCalls += 1;
+    if (this.simulationCalls <= this.simulationFailures) {
+      return { success: false, diagnostic: "execution reverted" };
+    }
     return { success: true, diagnostic: null };
   }
   async estimateFees(): Promise<{ gasLimit: bigint; maxGasNative: bigint }> {
@@ -539,6 +549,39 @@ describe("Agent Mint orchestration and recovery", () => {
       nextAction: null,
     });
     expect(harness.wallet.submitCount).toBe(2);
+    await harness.close();
+  });
+
+  it("re-simulates a Mint the chain has not caught up to yet", async () => {
+    const harness = await makeHarness({ submitMode: "confirmed" });
+    // The controller rejects a certificate newer than the block it runs
+    // against, so a simulation right after certification can revert while the
+    // Mint itself is valid a block later.
+    harness.wallet.simulationFailures = 2;
+    const minted = await harness.runtime.mineOnce({
+      confirmed: true,
+      unattended: false,
+      threads: 1,
+      registerContent: false,
+    });
+    expect(minted.state).toBe("MINT_CONFIRMED");
+    expect(harness.wallet.simulationCalls).toBe(3);
+    await harness.close();
+  });
+
+  it("gives up on a Mint that keeps failing simulation and keeps the certificate", async () => {
+    const harness = await makeHarness({ submitMode: "confirmed" });
+    harness.wallet.simulationFailures = 99;
+    const failed = await harness.runtime.mineOnce({
+      confirmed: true,
+      unattended: false,
+      threads: 1,
+      registerContent: false,
+    });
+    expect(failed.ok).toBe(false);
+    expect(failed.error?.code).toBe("INVALID_WORK");
+    expect(harness.wallet.simulationCalls).toBe(4);
+    expect(harness.wallet.submitCount).toBe(0);
     await harness.close();
   });
 

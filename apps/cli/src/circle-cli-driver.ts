@@ -522,23 +522,32 @@ export class CircleCliDriver implements ProviderWalletDriver {
     this.assertCall(call);
     const executable = await this.executableCall(call);
     const decoded = decodeCircleCall(executable.data);
-    const result = await this.runRetriable([
-      "wallet",
-      "execute",
-      decoded.abiFunctionSignature,
-      ...decoded.abiParameters,
-      "--contract",
-      executable.to,
-      "--amount",
-      formatUnits(executable.valueNative, 18),
-      "--address",
-      this.address,
-      "--chain",
-      this.circleChain,
-      "--estimate",
-      "--output",
-      "json",
-    ]);
+    let result;
+    try {
+      result = await this.runRetriable([
+        "wallet",
+        "execute",
+        decoded.abiFunctionSignature,
+        ...decoded.abiParameters,
+        "--contract",
+        executable.to,
+        "--amount",
+        formatUnits(executable.valueNative, 18),
+        "--address",
+        this.address,
+        "--chain",
+        this.circleChain,
+        "--estimate",
+        "--output",
+        "json",
+      ]);
+    } catch {
+      // Circle's estimate endpoint can be unavailable while the rest of the
+      // wallet works. The quote only bounds this CLI's own budget accounting,
+      // and Circle sponsors the Gas it actually charges, so a chain estimate
+      // is an honest substitute rather than a reason to abandon the work.
+      return this.chainFeeQuote(executable);
+    }
     const data = parseCircleData(result.stdout);
     const medium =
       data.medium !== null && typeof data.medium === "object"
@@ -547,11 +556,34 @@ export class CircleCliDriver implements ProviderWalletDriver {
     const gasLimit = unsignedBigintOrNull(medium?.gasLimit);
     const maxGasNative = decimalNativeOrNull(medium?.networkFee);
     if (gasLimit === null || maxGasNative === null) {
-      throw new Error(
-        "CIRCLE_ESTIMATE_INVALID: Circle returned no medium gas limit/network fee",
-      );
+      return this.chainFeeQuote(executable);
     }
     return { gasLimit, maxGasNative };
+  }
+
+  /**
+   * A fee quote taken from the chain itself, with the same margins Circle's
+   * medium tier applies, for when Circle cannot quote one.
+   */
+  private async chainFeeQuote(executable: {
+    readonly to: HexAddress;
+    readonly data: Hex;
+    readonly valueNative: bigint;
+  }): Promise<WalletFeeQuote> {
+    const gas = await this.options.publicClient.estimateGas({
+      account: this.address,
+      to: executable.to,
+      data: executable.data,
+      value: executable.valueNative,
+    });
+    const fees = await this.options.publicClient.estimateFeesPerGas();
+    const price =
+      fees.maxFeePerGas ??
+      fees.gasPrice ??
+      (await this.options.publicClient.getGasPrice());
+    // Round both up, so the budget this CLI reserves is never below the cost.
+    const gasLimit = (gas * 12n) / 10n;
+    return { gasLimit, maxGasNative: gasLimit * price };
   }
 
   async prepare(requestId: string, call: ContractCall): Promise<void> {
@@ -647,6 +679,10 @@ export class CircleCliDriver implements ProviderWalletDriver {
       gasSponsor: null,
       sponsorshipStatus: "UNKNOWN",
     };
+    if (result.status === "REVERTED" && result.transactionHash === null) {
+      // Rejected before broadcast: no transaction ran, so no Gas was spent.
+      return { ...unknown, gasSpentNative: 0n, networkGasCostNative: 0n };
+    }
     if (
       result.transactionHash === null ||
       (result.status !== "CONFIRMED" && result.status !== "REVERTED")
@@ -740,6 +776,24 @@ export class CircleCliDriver implements ProviderWalletDriver {
         }),
         record,
       );
+    }
+    if (matches.length === 0) {
+      // Circle can reject a request before it ever broadcasts one: the
+      // transaction is terminal, carries no hash and never reaches the chain,
+      // so the call-data match above cannot see it. Nothing was executed and
+      // nothing was charged, and leaving it unresolved would block the wallet
+      // from ever Minting again.
+      matches = listed.filter((candidate) => {
+        if (asBytes32OrNull(candidate.txHash) !== null) return false;
+        const state = asOptionalString(candidate.state)?.toUpperCase() ?? "";
+        if (state !== "FAILED" && state !== "CANCELLED" && state !== "DENIED") {
+          return false;
+        }
+        if (!matchesEnvelope(candidate, record)) return false;
+        const id = asOptionalString(candidate.id);
+        const claimed = id === null ? null : this.journal.findByOperationId(id);
+        return claimed === null || claimed.requestId === record.requestId;
+      });
     }
     if (matches.length !== 1) return submission("UNKNOWN", null);
     const transaction = matches[0]!;

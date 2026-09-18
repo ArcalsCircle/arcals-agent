@@ -68,7 +68,8 @@ explicitly converts.
   the user's environment. Arcals servers only see public addresses and
   signatures.
 
-Published worker platforms: `linux-x64`, `linux-arm64`, `darwin-arm64`.
+Published worker platforms: `linux-x64`, `linux-arm64`, `darwin-arm64`,
+`win32-x64`.
 
 ## Development
 

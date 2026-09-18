@@ -25,4 +25,7 @@ cmake \
   -B "$build_dir" \
   -DCMAKE_BUILD_TYPE=Release \
   -DRANDOMX_SOURCE_DIR="$prepared_dir"
-cmake --build "$build_dir" --target arcals-randomx-worker --parallel "${ARCALS_BUILD_JOBS:-4}"
+# --config is what multi-configuration generators (Visual Studio) read; they
+# ignore CMAKE_BUILD_TYPE and would otherwise produce a Debug binary.
+cmake --build "$build_dir" --target arcals-randomx-worker --config Release \
+  --parallel "${ARCALS_BUILD_JOBS:-4}"

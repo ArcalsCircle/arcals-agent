@@ -49,6 +49,8 @@ function value(
 }
 
 const worker = new RandomXWorkerClient(binaryPath);
+/** Set so that a failing shutdown cannot hide the failure that caused it. */
+let failure: unknown;
 try {
   const ready = await worker.request(
     {
@@ -323,6 +325,14 @@ try {
     await writeFile(outputPath, serialized);
   }
   process.stdout.write(serialized);
+} catch (error) {
+  failure = error;
+  throw error;
 } finally {
-  await worker.close();
+  try {
+    await worker.close();
+  } catch (error) {
+    if (failure === undefined) throw error;
+    console.error(`worker shutdown after failure: ${String(error)}`);
+  }
 }

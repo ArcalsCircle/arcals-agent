@@ -141,7 +141,11 @@ export class RandomXWorkerClient {
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.child.kill("SIGKILL");
-        reject(new Error("RandomX worker did not exit after stdin closed"));
+        reject(
+          new Error(
+            `RandomX worker did not exit after stdin closed diagnostic=${this.stderr}`,
+          ),
+        );
       }, 5000);
       this.child.once("exit", () => {
         clearTimeout(timeout);

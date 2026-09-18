@@ -21,6 +21,9 @@
 #include <sys/sysinfo.h>
 #elif defined(_WIN32)
 // Memory reporting uses the Win32 status API; the JSONL protocol stays identical.
+// NOMINMAX keeps the windows.h min/max macros away from std::max and friends.
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <psapi.h>
 #endif

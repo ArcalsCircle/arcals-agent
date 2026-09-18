@@ -98,8 +98,10 @@ uint64_t residentMemoryBytes() {
     value >> kibibytes;
     return kibibytes * 1024ULL;
   }
-#endif
   return 0;
+#else
+  return 0;
+#endif
 }
 
 std::vector<uint8_t> parseHex(const std::string& input, std::size_t expectedBytes) {

@@ -9,7 +9,11 @@ import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline/promises";
 
 const SCHEMA_VERSION = "1";
-const CIRCLE_VERSION = "1.1.0";
+// The version this Skill installs. Circle also enforces a floor server side and
+// refuses wallet operations from older CLIs, so an installation that is newer
+// than the tested one is accepted rather than downgraded.
+const CIRCLE_VERSION = "1.1.3";
+const CIRCLE_MINIMUM_VERSION = "1.1.3";
 const MIN_NODE = [20, 18, 2];
 const MINT_FEE_NATIVE = 100_000_000_000_000_000n;
 // Circle login calls can take well over 30 s; a shorter timeout would abandon
@@ -200,6 +204,20 @@ function runtimeStatus() {
   };
 }
 
+/** True when `version` is at least `minimum`, comparing numeric components. */
+function atLeastVersion(version, minimum) {
+  if (typeof version !== "string") return false;
+  const parts = version.split(".").map((part) => Number.parseInt(part, 10));
+  const floor = minimum.split(".").map((part) => Number.parseInt(part, 10));
+  if (parts.some((part) => !Number.isInteger(part))) return false;
+  for (let index = 0; index < floor.length; index += 1) {
+    const left = parts[index] ?? 0;
+    const right = floor[index];
+    if (left !== right) return left > right;
+  }
+  return true;
+}
+
 function requireCircle(command) {
   const version = circleVersion();
   if (version === null) {
@@ -208,10 +226,10 @@ function requireCircle(command) {
     });
     return null;
   }
-  if (version !== CIRCLE_VERSION) {
+  if (!atLeastVersion(version, CIRCLE_MINIMUM_VERSION)) {
     fail(
-      "CIRCLE_VERSION_CONFLICT",
-      `Installed Circle CLI ${version} differs from tested ${CIRCLE_VERSION}; do not silently replace it.`,
+      "CIRCLE_VERSION_UNSUPPORTED",
+      `Circle CLI ${version} is below ${CIRCLE_MINIMUM_VERSION}, which Circle requires for wallet operations. Run "circle update" or install @circle-fin/cli@${CIRCLE_VERSION}.`,
     );
   }
   return version;
@@ -495,12 +513,14 @@ async function main() {
 
   if (command === "check") {
     const version = circleVersion();
-    output(command, version === CIRCLE_VERSION ? "READY" : "NEEDS_INSTALL", {
+    const supported = atLeastVersion(version, CIRCLE_MINIMUM_VERSION);
+    output(command, supported ? "READY" : "NEEDS_INSTALL", {
       nodeVersion: process.versions.node,
       nodeSupported: nodeSupported(),
       circleCliVersion: version,
       testedCircleCliVersion: CIRCLE_VERSION,
-      circleVersionSupported: version === CIRCLE_VERSION,
+      minimumCircleCliVersion: CIRCLE_MINIMUM_VERSION,
+      circleVersionSupported: supported,
       arcalsRuntime: runtimeStatus(),
       officialCircleSkills: OFFICIAL_CIRCLE_SKILLS,
     });
@@ -515,7 +535,7 @@ async function main() {
       );
     }
     const current = circleVersion();
-    if (current === CIRCLE_VERSION) {
+    if (atLeastVersion(current, CIRCLE_MINIMUM_VERSION)) {
       output(command, "ALREADY_INSTALLED", {
         circleCliVersion: current,
       });
@@ -534,7 +554,10 @@ async function main() {
       ["install", "-g", `@circle-fin/cli@${CIRCLE_VERSION}`],
       { stdio: "inherit", timeout: 300_000, env: process.env },
     );
-    if (installed.status !== 0 || circleVersion() !== CIRCLE_VERSION) {
+    if (
+      installed.status !== 0 ||
+      !atLeastVersion(circleVersion(), CIRCLE_MINIMUM_VERSION)
+    ) {
       fail(
         "CIRCLE_INSTALL_FAILED",
         "The pinned Circle CLI installation did not complete successfully.",

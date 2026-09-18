@@ -16,7 +16,7 @@ writeFileSync(
   `#!/usr/bin/env node
 import { existsSync, writeFileSync } from "node:fs";
 const args = process.argv.slice(2);
-if (args[0] === "--version") { console.log("1.1.0"); process.exit(0); }
+if (args[0] === "--version") { console.log(process.env.FAKE_CIRCLE_VERSION ?? "1.1.3"); process.exit(0); }
 if (args[0] === "terms") {
   if (args[1] === "accept") {
     if (process.env.FAKE_TERMS_FILE) writeFileSync(process.env.FAKE_TERMS_FILE, "accepted");
@@ -78,10 +78,23 @@ function run(args, extraEnv = {}) {
 test("reports the pinned Circle dependency without mutating", () => {
   const result = run(["check"]);
   assert.equal(result.state, "READY");
-  assert.equal(result.data.circleCliVersion, "1.1.0");
+  assert.equal(result.data.circleCliVersion, "1.1.3");
   assert.ok(
     ["READY", "CLI_NOT_BUILT"].includes(result.data.arcalsRuntime.status),
   );
+});
+
+test("refuses a Circle CLI below the version Circle itself requires", () => {
+  const result = run(["check"], { FAKE_CIRCLE_VERSION: "1.1.0" });
+  assert.equal(result.state, "NEEDS_INSTALL");
+  assert.equal(result.data.circleVersionSupported, false);
+  assert.equal(result.data.minimumCircleCliVersion, "1.1.3");
+});
+
+test("accepts a Circle CLI newer than the tested one", () => {
+  const result = run(["check"], { FAKE_CIRCLE_VERSION: "1.2.0" });
+  assert.equal(result.state, "READY");
+  assert.equal(result.data.circleVersionSupported, true);
 });
 
 test("reports an explicitly configured Arcals CLI", () => {

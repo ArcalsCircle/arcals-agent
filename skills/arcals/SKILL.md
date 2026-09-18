@@ -27,7 +27,7 @@ Node.js 22.22 or newer. The Agent installs the CLI by cloning the repository at
 the release tag into the user's persistent environment and building it:
 
 ```text
-git clone --depth 1 --branch v1.2.0 https://github.com/ArcalsCircle/arcals-agent.git ~/.arcals/arcals-agent
+git clone --depth 1 --branch v1.2.1 https://github.com/ArcalsCircle/arcals-agent.git ~/.arcals/arcals-agent
 cd ~/.arcals/arcals-agent
 corepack enable && pnpm install --frozen-lockfile && pnpm build
 ```

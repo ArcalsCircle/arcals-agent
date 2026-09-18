@@ -105,7 +105,7 @@ requirement.
 
 | `--wallet-provider` | Manifest modes               | Purpose                                            |
 | ------------------- | ---------------------------- | -------------------------------------------------- |
-| `circle`            | `arc-testnet`, `arc-mainnet` | Circle Agent Wallet through Circle CLI 1.1.0       |
+| `circle`            | `arc-testnet`, `arc-mainnet` | Circle Agent Wallet through Circle CLI 1.1.3+      |
 | `rpc-unlocked`      | `local-fixture` only         | Unlocked local node account for tests and fixtures |
 
 The Circle adapter validates wallet identity, authenticates with

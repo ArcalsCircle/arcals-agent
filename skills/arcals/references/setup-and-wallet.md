@@ -38,14 +38,18 @@ node scripts/setup-agent-wallet.mjs check --chain ARC
 ```
 
 If it returns `NEEDS_INSTALL`, show the exact mutation
-`npm install -g @circle-fin/cli@1.1.0`. Only after the user explicitly approves
+`npm install -g @circle-fin/cli@1.1.3`. Only after the user explicitly approves
 that software installation, run:
 
 ```text
 node scripts/setup-agent-wallet.mjs install-circle --chain ARC --confirm-install
 ```
 
-Never silently replace a different installed Circle CLI version.
+Never silently replace a different installed Circle CLI version. Circle
+enforces a minimum version on its own servers and refuses wallet operations
+from older CLIs with `VERSION_BLOCKED`; an installation at or above the
+minimum is accepted as is, and one below it is upgraded with `circle update`
+only after the user approves.
 
 ## Conversation-first onboarding
 

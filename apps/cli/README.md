@@ -85,7 +85,7 @@ or override contract addresses, worker URLs or worker hashes.
 
 Users do not compile a trusted worker. The manifest's `worker.platforms` lists
 one `binarySha256` and HTTPS `binaryUrl` per published platform (`linux-x64`,
-`linux-arm64`, `darwin-arm64`). The URLs point to GitHub Release assets of
+`linux-arm64`, `darwin-arm64`, `win32-x64`). The URLs point to GitHub Release assets of
 `ArcalsCircle/arcals-agent`, built by that repository's public GitHub Actions
 workflow from the pinned worker source.
 

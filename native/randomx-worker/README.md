@@ -84,10 +84,10 @@ Target.
 Compiled workers differ per platform and toolchain, so users do not build their
 own trusted worker. An Agent manifest lists one trusted build per platform
 under `worker.platforms` (published keys `linux-x64`, `linux-arm64`,
-`darwin-arm64`), each with `binarySha256` and an HTTPS `binaryUrl`. The CLI
-selects the entry for `${process.platform}-${process.arch}` and stops with
-`WORKER_PLATFORM_UNSUPPORTED` when none exists. Intel macOS and Windows builds
-are not published.
+`darwin-arm64`, `win32-x64`), each with `binarySha256` and an HTTPS
+`binaryUrl`. The CLI selects the entry for
+`${process.platform}-${process.arch}` and stops with
+`WORKER_PLATFORM_UNSUPPORTED` when none exists. Intel macOS is not published.
 
 The CLI downloads the selected build into `~/.arcals/workers/<sha256>/`, checks
 the bytes against `binarySha256` before making them executable, and ignores any

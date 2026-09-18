@@ -27,7 +27,7 @@ Node.js 22.22 or newer. The Agent installs the CLI by cloning the repository at
 the release tag into the user's persistent environment and building it:
 
 ```text
-git clone --depth 1 --branch v1.1.0 https://github.com/ArcalsCircle/arcals-agent.git ~/.arcals/arcals-agent
+git clone --depth 1 --branch v1.2.0 https://github.com/ArcalsCircle/arcals-agent.git ~/.arcals/arcals-agent
 cd ~/.arcals/arcals-agent
 corepack enable && pnpm install --frozen-lockfile && pnpm build
 ```
@@ -44,7 +44,7 @@ node apps/cli/dist/main.js <command> --manifest manifests/arc-mainnet.json \
 
 The user never compiles a trusted RandomX worker. The manifest lists one
 SHA-256 and HTTPS release URL per supported platform (`linux-x64`,
-`linux-arm64`, `darwin-arm64`); the CLI downloads the worker into
+`linux-arm64`, `darwin-arm64`, `win32-x64`); the CLI downloads the worker into
 `~/.arcals/workers/<sha256>/` and verifies the hash before making it
 executable. Other platforms stop with `WORKER_PLATFORM_UNSUPPORTED`.
 

@@ -33,6 +33,10 @@
       "darwin-arm64": {
         "binarySha256": "4df40ad9ad94865d9228ad44385a51dc9775ae388431930bc2a8cb8dd3602359",
         "binaryUrl": "https://github.com/ArcalsCircle/arcals-agent/releases/download/worker-v1/arcals-randomx-worker-darwin-arm64"
+      },
+      "win32-x64": {
+        "binarySha256": "fecd4a25a788b6cca6d798650d31cf4477bd4e6e9735011c7fd2af62897a5330",
+        "binaryUrl": "https://github.com/ArcalsCircle/arcals-agent/releases/download/worker-v6/arcals-randomx-worker-win32-x64.exe"
       }
     }
   },

@@ -27,7 +27,7 @@ Node.js 22.22 or newer. The Agent installs the CLI by cloning the repository at
 the release tag into the user's persistent environment and building it:
 
 ```text
-git clone --depth 1 --branch v1.2.1 https://github.com/ArcalsCircle/arcals-agent.git ~/.arcals/arcals-agent
+git clone --depth 1 --branch v1.2.2 https://github.com/ArcalsCircle/arcals-agent.git ~/.arcals/arcals-agent
 cd ~/.arcals/arcals-agent
 corepack enable && pnpm install --frozen-lockfile && pnpm build
 ```
@@ -73,7 +73,7 @@ executable. Other platforms stop with `WORKER_PLATFORM_UNSUPPORTED`.
   `authorize --session` with the exact count, total spend, Gas budget and
   expiry the user agreed, then `run`. The CLI enforces those limits in its
   durable local ledger, not the wallet, so say so plainly, keep batches small
-  (at most 100 Mints and 6 hours), and stop at the limit instead of
+  (at most 10,000 Mints and 6 hours), and stop at the limit instead of
   re-authorizing on your own. `stop` revokes the batch immediately.
 - Only call `authorize` without `--session` when the wallet reports hard
   wallet/account evidence for every required capability.

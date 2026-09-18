@@ -1200,8 +1200,8 @@ describe("Agent Mint orchestration and recovery", () => {
 
     await expect(
       runtime.authorize({
-        maxMints: 101,
-        maxFeeNative: 20_000_000_000_000_000_000n,
+        maxMints: 10_001,
+        maxFeeNative: 2_000_000_000_000_000_000_000n,
         maxGasNative: 10_000n,
         expiresAt,
         enforcement: "session",

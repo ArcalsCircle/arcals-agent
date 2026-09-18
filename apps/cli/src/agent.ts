@@ -64,10 +64,12 @@ import { WALLET_CAPABILITY_NAMES, isHardCapability } from "./types.js";
 
 /**
  * A session authorization is enforced by this CLI's durable ledger instead of
- * the wallet, so it stays small and short: one explicit user confirmation
- * covers at most this many Mints, this much spend and this much time.
+ * the wallet: one explicit user confirmation covers at most this many Mints,
+ * this much spend and this much time. The count is high enough that it never
+ * interrupts a continuous run; the budget the user declares and the time
+ * window are what actually bound a session.
  */
-const SESSION_MAX_MINTS = 100;
+const SESSION_MAX_MINTS = 10_000;
 const SESSION_MAX_DURATION_MS = 6 * 60 * 60 * 1000;
 
 const UNATTENDED_CAPABILITIES = [

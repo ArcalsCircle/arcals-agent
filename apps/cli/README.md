@@ -161,6 +161,6 @@ idempotent submission.
 `authorize --session` covers wallets that cannot enforce those limits
 themselves. The CLI then enforces the count, spend, Gas budget and expiry in its
 durable ledger, so a restart cannot reset them and `stop` revokes them at once.
-A session is deliberately small: at most 100 Mints and 6 hours. Every response
+A session is bounded: at most 10,000 Mints and 6 hours. Every response
 states which layer enforces the batch in `enforcement` and `enforcedBy`; never
 present a session as wallet enforcement.

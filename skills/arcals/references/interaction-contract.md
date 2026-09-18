@@ -216,7 +216,7 @@ run --json
 
 `--session` limits are enforced by the CLI's durable ledger, not by the wallet;
 the response repeats this in `enforcedBy`. Tell the user which layer enforces
-the batch. A session covers at most 100 Mints and 6 hours; when it ends, ask
+the batch. A session covers at most 10,000 Mints and 6 hours; when it ends, ask
 again. Drop `--session` only when the wallet itself enforces count, spend, Gas,
 expiry, contract, selector and revocation — then the same commands run under
 wallet enforcement.

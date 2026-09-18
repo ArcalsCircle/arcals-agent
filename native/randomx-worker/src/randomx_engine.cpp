@@ -18,13 +18,11 @@
 #include <vector>
 
 #if defined(__linux__)
-#if defined(__linux__)
 #include <sys/sysinfo.h>
 #elif defined(_WIN32)
 // Memory reporting uses the Win32 status API; the JSONL protocol stays identical.
 #include <windows.h>
 #include <psapi.h>
-#endif
 #endif
 
 #include "randomx.h"

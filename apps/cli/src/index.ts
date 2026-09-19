@@ -1,5 +1,6 @@
 export * from "./agent.js";
 export * from "./commands.js";
+export * from "./companion.js";
 export * from "./circle-cli-driver.js";
 export * from "./ledger.js";
 export * from "./randomx-miner.js";

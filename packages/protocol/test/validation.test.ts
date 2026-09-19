@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  certificateIssuedAt,
+  challengeValidAfter,
+  EXECUTOR_LAG_MARGIN_SECONDS,
   MINT_FEE_NATIVE,
   ProtocolValidationError,
   validateCertificateWindow,
@@ -47,6 +50,48 @@ function expectCode(action: () => void, code: string) {
     expect((error as ProtocolValidationError).code).toBe(code);
   }
 }
+
+describe("dating work behind the head block", () => {
+  const head = 1_000_000n;
+  const epochStart = 900_000n;
+
+  it("dates a Challenge back so a trailing executor still accepts it", () => {
+    expect(challengeValidAfter(head, epochStart)).toBe(
+      head - EXECUTOR_LAG_MARGIN_SECONDS,
+    );
+  });
+
+  it("never dates a Challenge before its Epoch, which the controller rejects", () => {
+    // The first moments of an Epoch: the margin would reach past its start.
+    expect(challengeValidAfter(epochStart + 10n, epochStart)).toBe(epochStart);
+  });
+
+  it("dates a Certificate back by the same margin", () => {
+    const startedAtMs = Number(head) * 1000;
+    expect(certificateIssuedAt(startedAtMs, 0n)).toBe(
+      head - EXECUTOR_LAG_MARGIN_SECONDS,
+    );
+  });
+
+  it("never dates a Certificate before its Challenge", () => {
+    const startedAtMs = Number(head) * 1000;
+    expect(certificateIssuedAt(startedAtMs, head - 10n)).toBe(head - 10n);
+  });
+
+  it("keeps a dated Challenge and Certificate inside the on-chain windows", () => {
+    const maxChallengeTtl = 1_200n;
+    const maxCertificateTtl = 300n;
+    const validAfter = challengeValidAfter(head, epochStart);
+    const expiresAt = validAfter + maxChallengeTtl;
+    const issuedAt = certificateIssuedAt(Number(head) * 1000, validAfter);
+    expect(expiresAt - validAfter).toBeLessThanOrEqual(maxChallengeTtl);
+    expect(issuedAt).toBeGreaterThanOrEqual(validAfter);
+    // What is left of the Certificate once it is dated back: the client needs
+    // 90 s to send one.
+    const usable = maxCertificateTtl - EXECUTOR_LAG_MARGIN_SECONDS;
+    expect(usable).toBeGreaterThan(90n);
+  });
+});
 
 describe("Challenge and Certificate time boundaries", () => {
   it("accepts maximum inclusive TTL while expiry itself remains exclusive", () => {

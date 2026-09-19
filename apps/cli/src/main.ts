@@ -13,6 +13,7 @@ import {
 
 import { AgentRuntime } from "./agent.js";
 import { CircleCliDriver } from "./circle-cli-driver.js";
+import { runCompanionCommand } from "./companion-command.js";
 import {
   executeParsedCommand,
   parseArguments,
@@ -57,6 +58,12 @@ let ledger: SqliteOperationLedger | null = null;
 let runtime: AgentRuntime | null = null;
 try {
   const parsed = parseArguments(process.argv.slice(2));
+  if (parsed.positionals[0] === "companion") {
+    // The Compute Companion only computes; it needs no wallet or ledger.
+    const result = await runCompanionCommand(parsed);
+    process.stdout.write(`${JSON.stringify(result)}\n`);
+    process.exit(result.ok ? 0 : 1);
+  }
   const manifestPath = parsed.values["--manifest"];
   const walletAddress = parsed.values["--wallet-address"];
   if (manifestPath === undefined || walletAddress === undefined) {

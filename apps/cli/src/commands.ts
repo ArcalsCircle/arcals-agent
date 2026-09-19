@@ -9,6 +9,7 @@ const BOOLEAN_FLAGS = new Set([
   "--confirm",
   "--with-content",
   "--session",
+  "--detach",
 ]);
 
 export interface ParsedArguments {

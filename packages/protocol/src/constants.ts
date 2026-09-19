@@ -15,6 +15,19 @@ export const MINT_FEE_NATIVE = 100_000_000_000_000_000n;
 export const UNIT = 360_000_000_000_000_000_000n;
 export const ARCL_MAX = 360_000_000_000_000_000_000_000_000n;
 
+/**
+ * How far behind the head block a Challenge and its Work Certificate are dated.
+ *
+ * The controller rejects a Challenge whose `validAfter` is newer than the block
+ * executing it, and a Certificate whose `issuedAt` is. The backend reads its
+ * timestamps from the most current Arc node it knows, so an executing wallet
+ * whose own node is even slightly behind would reject work that is perfectly
+ * valid on chain. Dating both a margin into the past absorbs that difference.
+ * It costs the Certificate the same margin of its life, which must stay well
+ * clear of the window a client needs to send one.
+ */
+export const EXECUTOR_LAG_MARGIN_SECONDS = 120n;
+
 export const EIP712_DOMAIN_NAME = "ArcalsMint";
 export const EIP712_DOMAIN_VERSION = "1";
 

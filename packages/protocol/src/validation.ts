@@ -1,5 +1,43 @@
-import { MINT_FEE_NATIVE, PROTOCOL_VERSION, UINT64_MAX } from "./constants.js";
+import {
+  EXECUTOR_LAG_MARGIN_SECONDS,
+  MINT_FEE_NATIVE,
+  PROTOCOL_VERSION,
+  UINT64_MAX,
+} from "./constants.js";
 import type { Challenge, WorkCertificate } from "./types.js";
+
+/**
+ * The `issuedAt` a Work Certificate carries, dated back so that a wallet whose
+ * node trails the backend's still accepts it. The Verifier writes this value
+ * and the Signer recomputes it, so both must derive it here and nowhere else.
+ * It never predates the Challenge, which the controller also rejects.
+ */
+export function certificateIssuedAt(
+  verificationStartedAtMs: number,
+  challengeValidAfter: bigint,
+): bigint {
+  const started = BigInt(Math.floor(verificationStartedAtMs / 1000));
+  const dated = started - EXECUTOR_LAG_MARGIN_SECONDS;
+  return dated < challengeValidAfter ? challengeValidAfter : dated;
+}
+
+/**
+ * The `validAfter` a Challenge carries, dated back for the same reason. The
+ * caller must derive `expiresAt` from this value, not from the head block, so
+ * that the Challenge window stays within `maxChallengeTtl`. It never predates
+ * the Epoch commitment, which the controller rejects, so the first Challenges
+ * of an Epoch are simply dated at its start.
+ */
+export function challengeValidAfter(
+  headBlockTimestamp: bigint,
+  epochValidFrom: bigint,
+): bigint {
+  const dated =
+    headBlockTimestamp < EXECUTOR_LAG_MARGIN_SECONDS
+      ? 0n
+      : headBlockTimestamp - EXECUTOR_LAG_MARGIN_SECONDS;
+  return dated < epochValidFrom ? epochValidFrom : dated;
+}
 
 export type ValidationCode =
   | "UNSUPPORTED_PROTOCOL_VERSION"

@@ -101,6 +101,41 @@ without the browser quarantine attribute, trust comes from the manifest hash,
 and the linker's ad-hoc signature satisfies the Apple Silicon code-signing
 requirement.
 
+## Compute Companion
+
+Browser-wallet Mint on `arcals.fun` signs with the user's own wallet but still
+needs real RandomX work on the user's machine. The Companion is that local
+worker, exposed to the website only:
+
+```sh
+node apps/cli/dist/main.js companion start            # foreground, Ctrl+C stops
+node apps/cli/dist/main.js companion start --detach   # background, logs to ~/.arcals/companion.log
+node apps/cli/dist/main.js companion status
+node apps/cli/dist/main.js companion stop
+```
+
+It defaults to `manifests/arc-mainnet.json`, downloads and verifies the
+platform worker exactly as Mint does, and listens on `127.0.0.1:39093`.
+
+| Route                  | Purpose                                                                                                     |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `GET /health`          | protocol version, manifest `algorithmId` / `parameterDigest`, worker hash                                   |
+| `POST /v1/jobs`        | start work: `challengeInput`, `epochKey`, `target`, `expiresAt`, `algorithmId`, `parameterDigest`           |
+| `GET /v1/jobs/{id}`    | `QUEUED`, `COMPUTING`, `SOLUTION_FOUND` (with `workNonce`, `randomxHash`), `FAILED`, `EXPIRED`, `CANCELLED` |
+| `DELETE /v1/jobs/{id}` | cancel; a running search stops inside the worker                                                            |
+
+Boundaries:
+
+- It only computes. It never receives a wallet key, an Arcals API session or a
+  transaction, and accepts only work whose parameters match the manifest.
+- Only `https://arcals.fun` and `https://www.arcals.fun` may call it
+  (`--origin` adds one for local development). A foreign origin is refused
+  before any work starts, and a request whose `Host` is not a loopback name is
+  refused, which blocks DNS rebinding.
+- Identical work maps to one job, so a page that reloads and receives the same
+  Challenge back from the API resumes the search instead of restarting it.
+- At most 8 unfinished jobs; finished jobs are kept for 10 minutes.
+
 ## Wallet adapters
 
 | `--wallet-provider` | Manifest modes               | Purpose                                            |

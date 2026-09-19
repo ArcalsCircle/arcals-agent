@@ -1,0 +1,92 @@
+name: Release browser engine
+
+# Builds the WebAssembly RandomX engine from this repository's pinned source
+# with a pinned Emscripten, proves it against the CPU's own rounding modes, the
+# official test vector and the native worker, then attaches the files and
+# their SHA-256 checksums to the GitHub Release for the pushed
+# browser-engine-v* tag.
+
+on:
+  push:
+    tags: ["browser-engine-v*"]
+
+permissions:
+  contents: read
+
+env:
+  EMSCRIPTEN_VERSION: 4.0.15
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository and pinned submodules
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+      - name: Install Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.0
+      - name: Activate pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.0 --activate
+      - name: Install native build prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends cmake g++
+      - name: Install Emscripten
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install "$EMSCRIPTEN_VERSION"
+          "$RUNNER_TEMP/emsdk/emsdk" activate "$EMSCRIPTEN_VERSION"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build protocol package
+        run: pnpm --filter @arcals/protocol build
+      - name: Software rounding matches the CPU's rounding modes
+        run: |
+          g++ -O2 -std=c++17 -frounding-math -o rounding-test native/randomx-wasm/test/rounding_test.cpp
+          ./rounding-test
+      - name: Build the native worker (reference)
+        run: bash native/randomx-worker/scripts/build.sh
+      - name: Build the browser engine
+        run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          bash native/randomx-wasm/scripts/build.sh
+      - name: Official vector and native parity
+        run: node tools/benchmark/wasm-parity.mjs
+      - name: Differential against the native worker
+        run: node tools/benchmark/wasm-differential.mjs 2000 4
+      - name: Engine end to end at the production Target
+        run: node tools/benchmark/wasm-engine-test.mjs 2 3
+      - name: Upload build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-engine
+          path: native/randomx-wasm/dist/
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: browser-engine
+          path: dist
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat dist/SHA256SUMS
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "Arcals browser RandomX engine. Serve all four files together and verify them against SHA256SUMS." \
+            dist/arcals-randomx.wasm dist/arcals-randomx.mjs dist/engine.mjs dist/engine-worker.mjs dist/SHA256SUMS

@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Arcals engine browser test</title>
+<script type="module">
+  import { ArcalsBrowserEngine, ALGORITHM_ID, PARAMETER_DIGEST } from "./engine.mjs";
+  const params = new URLSearchParams(location.search);
+  const workers = Number(params.get("workers") ?? 4);
+  const rounds = Number(params.get("rounds") ?? 5);
+  const epochKey = "0x36c80fe9201e6d2644b5901f0a17e82773d127223e4e6f4ab1c7882677c934de";
+  const target = "361850278866613110698659328152149712041468702080126762623304950024728530123";
+  const random32 = () => "0x" + Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, "0")).join("");
+  const engine = new ArcalsBrowserEngine({ workers });
+  const results = [];
+  const pageStart = performance.now();
+  try {
+    for (let round = 0; round < rounds; round += 1) {
+      const challengeInput = random32();
+      const started = performance.now();
+      let prepared = null;
+      const solution = await engine.solve(
+        { challengeInput, epochKey, target, expiresAt: String(Math.floor(Date.now() / 1000) + 900), algorithmId: ALGORITHM_ID, parameterDigest: PARAMETER_DIGEST },
+        { onProgress: (p) => { if (p.phase === "COMPUTING" && prepared === null) prepared = performance.now() - started; } });
+      results.push({ challengeInput, ...solution, wallMs: Math.round(performance.now() - started), prepareMs: Math.round(prepared ?? 0) });
+    }
+    window.__result = { ok: true, workers, userAgent: navigator.userAgent, cores: navigator.hardwareConcurrency, results, totalMs: Math.round(performance.now() - pageStart) };
+  } catch (error) {
+    window.__result = { ok: false, error: String(error) };
+  }
+  engine.dispose();
+</script>

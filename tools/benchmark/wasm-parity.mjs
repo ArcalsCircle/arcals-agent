@@ -11,7 +11,7 @@ const root = join(
   "../../native/randomx-wasm",
 );
 const createArcalsRandomX = (
-  await import(join(root, "dist/arcals-randomx.mjs"))
+  await import(join(root, "build/test/arcals-randomx.mjs"))
 ).default;
 const rx = await createArcalsRandomX();
 const hex = (bytes) => `0x${Buffer.from(bytes).toString("hex")}`;

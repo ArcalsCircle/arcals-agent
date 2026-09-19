@@ -16,7 +16,9 @@ const hex = (bytes) => `0x${Buffer.from(bytes).toString("hex")}`;
 
 if (!isMainThread) {
   const create = (
-    await import(join(repo, "native/randomx-wasm/dist/arcals-randomx.mjs"))
+    await import(
+      join(repo, "native/randomx-wasm/build/test/arcals-randomx.mjs")
+    )
   ).default;
   const rx = await create();
   const put = (value) => {

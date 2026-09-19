@@ -14,9 +14,11 @@ const root = join(
 );
 // Playwright is not a dependency of this repository; point PLAYWRIGHT_CORE at
 // an installed playwright-core and CHROMIUM_PATH at a Chromium binary.
-const { chromium } = await import(
+const playwright = await import(
   process.env.PLAYWRIGHT_CORE ?? "playwright-core"
 );
+// playwright-core is CommonJS: its API may sit on the default export.
+const chromium = playwright.chromium ?? playwright.default.chromium;
 const types = {
   ".html": "text/html",
   ".mjs": "text/javascript",
@@ -120,10 +122,12 @@ for (const [index, r] of result.results.entries()) {
   ).data.hash;
   const agrees = want === r.randomxHash && BigInt(want) <= target;
   if (!agrees) failures += 1;
-  hashes += Number(r.hashesTried);
+  // Each Worker reports only its own count; nonces are dense across Workers,
+  // so the winning nonce + 1 approximates the work done by all of them.
+  hashes += Number(r.workNonce) + 1;
   computeMs += r.wallMs - r.prepareMs;
   console.log(
-    `round ${index}: ${r.hashesTried} hashes, ${(r.wallMs / 1000).toFixed(1)} s (prepare ${(r.prepareMs / 1000).toFixed(1)} s) — native ${agrees ? "AGREES" : "DISAGREES"}`,
+    `round ${index}: nonce ${r.workNonce} (${r.hashesTried} on the winning Worker), ${(r.wallMs / 1000).toFixed(1)} s (prepare ${(r.prepareMs / 1000).toFixed(1)} s) — native ${agrees ? "AGREES" : "DISAGREES"}`,
   );
 }
 await native.close();
